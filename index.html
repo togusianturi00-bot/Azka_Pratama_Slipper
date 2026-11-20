@@ -74,7 +74,7 @@
     </section>
 
     <!-- Struktur organisasi -->
-    <section class="section section-soft" id="struktur">
+    <section class="section section-soft" id="struktur" data-nav-target="tentang">
       <div class="container">
         <div class="section-heading reveal">
           <h2>TIM KAMI</h2>
@@ -286,9 +286,9 @@
           <h2>Lokasi Kami</h2>
         </div>
         <div class="location-card reveal">
-          <a class="map-link" href="https://maps.app.goo.gl/1qSL36piZXtC5aQi7?g_st=ic" target="_blank" rel="noopener noreferrer" aria-label="Buka lokasi Azka Pratama Slipper di Google Maps">
-            <img src="assets/img/about/gambarmap.jpeg" alt="Peta lokasi Azka Pratama Slipper di Joho, Condongcatur" loading="lazy">
-          </a>
+          <div class="map-embed">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3453.229785517622!2d110.39358046409795!3d-7.750141671874199!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e7a5908e1c785f7%3A0x83b8df05a61f1b49!2sProdusen%20Sandal%20Hotel%20Azka%20Pratama%20Slipper!5e1!3m2!1sid!2sid!4v1795193589518!5m2!1sid!2sid" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" title="Peta lokasi Azka Pratama Slipper di Google Maps"></iframe>
+          </div>
           <div class="location-content">
             <p class="section-kicker">Yogyakarta</p>
             <h3>Azka Pratama Slipper</h3>
@@ -723,6 +723,86 @@
       }
     });
 
+    const scrollSections = Array.from(document.querySelectorAll('main section[id]'));
+    const menuLinks = Array.from(document.querySelectorAll('#menu-utama a[href^="#"]'));
+    let scrollSpyFrame = null;
+    let scrollSettleTimer = null;
+    let isMenuNavigation = false;
+
+    const setActiveMenuLink = (targetId) => {
+      menuLinks.forEach((link) => {
+        if (link.getAttribute('href') === `#${targetId}`) {
+          link.setAttribute('aria-current', 'true');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+    };
+
+    const updateScrollSpy = () => {
+      const documentElement = document.documentElement;
+      const atPageBottom = window.innerHeight + window.scrollY >= documentElement.scrollHeight - 4;
+      let activeSection;
+
+      if (atPageBottom) {
+        activeSection = document.querySelector('#kontak');
+      } else if (window.scrollY <= 4) {
+        activeSection = document.querySelector('#beranda');
+      } else {
+        const detectionLine = window.innerHeight * 0.35;
+        activeSection = scrollSections.find((section) => {
+          const bounds = section.getBoundingClientRect();
+          return bounds.top <= detectionLine && bounds.bottom > detectionLine;
+        });
+      }
+
+      if (activeSection) {
+        setActiveMenuLink(activeSection.dataset.navTarget || activeSection.id);
+      }
+    };
+
+    const scheduleScrollSpy = () => {
+      if (isMenuNavigation || scrollSpyFrame !== null) return;
+      scrollSpyFrame = requestAnimationFrame(() => {
+        scrollSpyFrame = null;
+        if (!isMenuNavigation) updateScrollSpy();
+      });
+    };
+
+    const resumeScrollSpy = () => {
+      isMenuNavigation = false;
+      scrollSettleTimer = null;
+      updateScrollSpy();
+    };
+
+    menuLinks.forEach((link) => {
+      link.addEventListener('click', () => {
+        setActiveMenuLink(link.hash.slice(1));
+        isMenuNavigation = true;
+        clearTimeout(scrollSettleTimer);
+        scrollSettleTimer = setTimeout(resumeScrollSpy, 180);
+      });
+    });
+
+    if ('IntersectionObserver' in window) {
+      const sectionObserver = new IntersectionObserver(scheduleScrollSpy, { threshold: 0 });
+      scrollSections.forEach((section) => sectionObserver.observe(section));
+    }
+
+    window.addEventListener('scroll', () => {
+      if (isMenuNavigation) {
+        clearTimeout(scrollSettleTimer);
+        scrollSettleTimer = setTimeout(resumeScrollSpy, 180);
+      } else {
+        scheduleScrollSpy();
+      }
+    }, { passive: true });
+    window.addEventListener('resize', scheduleScrollSpy);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(scheduleScrollSpy);
+    }
+
+    updateScrollSpy();
     const revealItems = document.querySelectorAll('.reveal');
     if ('IntersectionObserver' in window) {
       const revealObserver = new IntersectionObserver((entries, observer) => {
